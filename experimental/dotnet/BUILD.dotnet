@@ -13,7 +13,6 @@ pkg_tar(
             "BUILD.bazel",
         ],
     ),
-    package_dir = "/jetty",
-    # See: https://github.com/bazelbuild/bazel/issues/2176
+    package_dir = "/opt/dotnet",
     strip_prefix = ".",
 )

@@ -1,19 +1,33 @@
 # Examples
 
-### **Downloading minimal python library packages from a snapshot of `debian jessie`**.
+### **Downloading minimal python library packages from a snapshot of `debian stretch`**.
 
 `dpkg_src` and `dpkg_list` are repository rules, and therefore made to be used in the `WORKSPACE`.
 
-First, set up the package source with `dpkg_src` rule.  This example uses a snapshot of debian jessie from July 1st 2017.  The rule outputs a `file:Packages.json` which contains a parsed and formatted `Packages.gz` for `dpkg_list` to consume.
+First, set up the package source with `dpkg_src` rule.  This example uses a snapshot of debian stretch from November 1st 2017.  The rule outputs a `file:Packages.json` which contains a parsed and formatted `Packages.gz` for `dpkg_list` to consume.
 
 ```python
 dpkg_src(
-    name = "debian_jessie",
+    name = "debian_stretch",
     arch = "amd64",
-    distro = "jessie",
-    sha256 = "8ff5e7a54d4e75bbbcd2f43ebc7cb4a082fbc5493bc9fb2dcdaaeacba6e76dee",
-    snapshot = "20170701T034145Z",
+    distro = "stretch",
+    sha256 = "9aea0e4c9ce210991c6edcb5370cb9b11e9e554a0f563e7754a4028a8fd0cb73",
+    snapshot = "20171101T160520Z",
     url = "http://snapshot.debian.org/archive",
+)
+```
+
+You can also set up the package source using the full url for the `Packages.gz` file. The `package_prefix` is used to
+prepend to the value of `Filename` in the `Packages.gz` file. In the following example, if the value of `Filename` is
+`pool/jdk1.8/b/bazel/bazel_0.7.0_amd64.deb`, then the `.deb` artifact will later be downloaded from
+`http://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_0.7.0_amd64.deb`.
+
+```python
+dpkg_src(
+    name = "bazel_apt",
+    packages_gz_url = "http://storage.googleapis.com/bazel-apt/dists/stable/jdk1.8/binary-amd64/Packages.gz",
+    package_prefix = "http://storage.googleapis.com/bazel-apt/",
+    sha256 = "0fc4c6988ebf24705cfab0050cb5ad58e5b2aeb0e8cfb8921898a1809042416c",
 )
 ```
 
@@ -29,7 +43,7 @@ dpkg_list(
         "zlib1g",
     ],
     sources = [
-        "@debian_jessie//file:Packages.json",
+        "@debian_stretch//file:Packages.json",
     ],
 )
 ```
@@ -62,10 +76,14 @@ docker_build(
 ## dpkg_src
 
 ```python
-dpkg_src(name, url, arch, distro, snapshot, sha256, dpkg_parser)
+dpkg_src(name, url, arch, distro, snapshot, packages_gz_url, package_prefix, sha256, dpkg_parser)
 ```
 
-A rule that downloads a Packages.gz snapshot file and parses it into a readable format for `dpkg_list`.  It currently only supports snapshots from [http://snapshot.debian.org/](http://snapshot.debian.org/).  You can find out more about the format and sources available there.  
+A rule that downloads a `Packages.gz` snapshot file and parses it into a readable format for `dpkg_list`.
+It supports snapshots from [http://snapshot.debian.org/](http://snapshot.debian.org/). (You can find out more about the format and sources available there.)
+It also supports retrieving `Packages.gz` file from a given full url.
+
+Either a set of {`url`, `arch`, `distro`, `snapshot`} or a set of {`packages_gz_url`, `package_prefix`} must be set.
 
 <table class="table table-condensed table-bordered table-params">
   <colgroup>
@@ -87,29 +105,41 @@ A rule that downloads a Packages.gz snapshot file and parses it into a readable 
     <tr>
       <td><code>url</code></td>
       <td>
-        <p><code>the base url of the package repository, required</code></p>
+        <p><code>the base url of the package repository</code></p>
         <p>The url that hosts snapshots of Packages.gz files.</p>
       </td>
     </tr>
     <tr>
       <td><code>arch</code></td>
       <td>
-        <p><code>the target package architecture, required</code></p>
+        <p><code>the target package architecture</code></p>
       </td>
     </tr>
     <tr>
       <td><code>distro</code></td>
       <td>
-        <p><code>the name of the package distribution, required</code></p>
-        <p>Examples: wheezy, jessie, jessie-backports, etc.</p>
+        <p><code>the name of the package distribution</code></p>
+        <p>Examples: wheezy, jessie, stretch-backports, etc.</p>
       </td>
     </tr>
     <tr>
       <td><code>snapshot</code></td>
       <td>
-        <p><code>the snapshot date of the Packages.gz, required</code></p>
+        <p><code>the snapshot date of the Packages.gz</code></p>
         <p>Format: YYYYMMDDTHHMMSSZ.  You can query a list of possible dates for snapshot.debian.org at <a href=
         'http://snapshot.debian.org/archive/debian/?year=2009;month=10'>http://snapshot.debian.org/archive/debian/?year=2009;month=10</a>
+      </td>
+    </tr>
+    <tr>
+      <td><code>packages_gz_url</code></td>
+      <td>
+        <p><code>the full url for the Packages.gz file</code></p>
+      </td>
+    </tr>
+    <tr>
+      <td><code>package_prefix</code></td>
+      <td>
+        <p><code>the prefix to prepend to the value of Filename in the Packages.gz file</code></p>
       </td>
     </tr>
     <tr>
@@ -158,14 +188,14 @@ For a `dpkg_list` rule named `package_bundle`, packages can be used by loading `
       <td><code>packages</code></td>
       <td>
         <p><code>a string array of packages to download, required</code></p>
-        <p>The url that hosts snapshots of Packages.gz files.</p>
+        <p>The names of Debian packages that will be downloaded. You can optionally add <code>=version</code> to require a specific version.</p>
       </td>
     </tr>
     <tr>
       <td><code>sources</code></td>
       <td>
         <p><code>a list of outputs from dpkg_src, required</code></p>
-        <p>A list of snapshot sources that will be checked when downloading the package.  If a package is present in multiple sources, the first source in the list will be chosen.</p>
+        <p>A list of snapshot sources that will be checked when downloading the package.  If a package is present in multiple sources, the first source in the list will be chosen. This means security updates should be first.</p>
       </td>
     </tr>
   </tbody>

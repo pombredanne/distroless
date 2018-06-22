@@ -4,23 +4,65 @@
 
 This image definition contains a minimal Linux, dotnet-based [coreCLR](https://github.com/dotnet/core) runtime.
 
-Specifically, the image contains everything in the [base image](../base/README.md), plus:
+Specifically, the image contains everything in the [/cc image](../cc/README.md), plus:
 
-* coreCLR 2.0.0 Runtime and its [dependencies](https://github.com/dotnet/dotnet-docker/blob/b108e6c5a582080ce343dbfc0c1576a5b2293291/2.0/runtime-deps/jessie/amd64/Dockerfile).
+- coreCLR 2.0.0 Runtime and its [dependencies]
 
-and
+  * [runtime-deps](https://github.com/dotnet/dotnet-docker/blob/master/2.0/runtime-deps/stretch/amd64/Dockerfile)
+  * [runtime](https://github.com/dotnet/dotnet-docker/blob/master/2.0/runtime/stretch/amd64/Dockerfile)
+
 
 ```
     base = "//cc:cc",
     debs = [
-        packages["libcurl3"],       
+        packages["libcurl3"],
         packages["libgssapi-krb5-2"],
-        packages["libicu52"],
+        packages["libicu57"],
         packages["liblttng-ust0"],
+        packages["libssl1.0.2"],
         packages["libunwind8"],
         packages["libuuid1"],
+        packages["zlib1g"],
+        packages["curl"],
+        packages["libcomerr2"],
+        packages["libidn2-0"],
+        packages["libk5crypto3"],
+        packages["libkrb5-3"],
+        packages["libldap-2.4-2"],
+        packages["libldap-common"],
+        packages["libsasl2-2"],
+        packages["libnghttp2-14"],
+        packages["libpsl5"],
+        packages["librtmp1"],
+        packages["libssh2-1"],
+        packages["libkeyutils1"],
+        packages["libkrb5support0"],
+        packages["libunistring0"],
+        packages["libgnutls30"],
+        packages["libgmp10"],
+        packages["libhogweed4"],
+        packages["libidn11"],
+        packages["libnettle6"],
+        packages["libp11-kit0"],
+        packages["libffi6"],
+        packages["libtasn1-6"],
+        packages["libsasl2-modules-db"],
+        packages["libdb5.3"],
+        packages["libgcrypt20"],
+        packages["libgpg-error0"],
+        packages["libacl1"],
+        packages["libattr1"],
+        packages["libselinux1"],
+        packages["libpcre3"],
+        packages["libbz2-1.0"],
         packages["liblzma5"],
     ],
+```
+
+> Note, these dependencies are from the coreclr ```runtime``` and ```runtime-deps``` that also install ```curl```
+```
+# apt-get install apt-rdepends
+# apt-rdepends curl
 ```
 
 >> **NOTE**  bazel does _not_ support dotnet build rules yet (see [issue #39](https://github.com/bazelbuild/rules_dotnet/issues/39)) so unlike other
@@ -31,7 +73,54 @@ binary files is described below.
 
 The entrypoint of this image is left unset so this image expects users to supply a the full 'dotnet' and path to the generated .dll file in the CMD.
 
-See [examples/dotnet/BUILD](examples/dotnet/BUILD):
+
+## Example Hello World
+
+To build directly:
+
+```bash
+$ dotnet --version
+2.0.0
+
+$ docker --version
+Docker version 17.05.0-ce, build 89658be
+```
+
+then
+
+```bash
+$ mkdir console && cd console
+$ dotnet new console
+```
+
+create a Dockerfile
+
+```dockerfile
+FROM microsoft/dotnet:2.0.0-sdk AS build-env
+ADD . /app
+WORKDIR /app
+RUN dotnet restore
+RUN dotnet publish  -c Release
+
+FROM gcr.io/distroless/dotnet
+WORKDIR /app
+COPY --from=build-env /app /app/
+ENTRYPOINT ["dotnet", "bin/Release/netcoreapp2.0/console.dll"]
+```
+
+then
+```bash
+
+$ docker build -t myapp .
+
+$ docker run -t myapp
+Hello World!
+```
+
+
+## Example Hello World with bazel
+
+See the dotnet [Hello World](../examples/dotnet/) directory for an example and [examples/dotnet/BUILD](examples/dotnet/BUILD) using bazel:
 
 ```
 docker_build(
@@ -44,12 +133,6 @@ docker_build(
     files = [":bin"],
 )
 ```
-
-
-## Example Hello World
-
-See the dotnet [Hello World](../examples/dotnet/) directory for an example.
-
 
 ### Prerequsite
 

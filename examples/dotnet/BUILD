@@ -5,7 +5,7 @@ load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
 
 docker_build(
     name = "hello",
-    base = "//dotnet:dotnet",
+    base = "//experimental/dotnet:dotnet",
     cmd = [
         "dotnet",
         "/bin/Release/netcoreapp2.0/hello.dll",
@@ -17,6 +17,7 @@ load("@runtimes_common//structure_tests:tests.bzl", "structure_test")
 
 structure_test(
     name = "hello_test",
+    size = "small",
     config = "testdata/hello.yaml",
     image = ":hello",
 )

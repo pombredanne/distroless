@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/python
 
 # Copyright 2017 Google Inc. All rights reserved.
 
@@ -14,10 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-files=$(buildifier -mode=check $(find . -name 'BUILD*' -o -name 'WORKSPACE*' -type f))
-if [ $? -ne 0 ]; then
-  if [[ $files ]]; then
-    echo "Run 'buildifier -mode fix \$(find . -name 'BUILD*' -o -name 'WORKSPACE*' -type f)' to fix formatting"
-  fi
-  exit 1
-fi
+import argparse
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument('root', type=str,
+                    help='The root directory to walk.')
+
+def main(args):
+    """Prints the files that are inside the container, rooted at the first argument."""
+    for dirpath, _, files in os.walk(args.root):
+        for f in files:
+            print(os.path.join(dirpath, f))
+
+if __name__ == "__main__":
+    main(parser.parse_args())
